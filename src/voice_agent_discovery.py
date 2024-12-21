@@ -42,6 +42,7 @@ class VoiceAgentDiscovery:
             
             # Analyze conversation
             import pdb; pdb.set_trace()
+            print(f"\n Analyzing transcript: {transcript} \n")
             new_scenarios, outcome = self.analyzer.analyze(transcript)
             
             # Track scenario
