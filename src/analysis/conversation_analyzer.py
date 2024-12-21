@@ -11,10 +11,10 @@ class ConversationAnalyzer:
         messages = [
             {
                 "role": "system",
-                "content": """You are an expert in analyzing customer service conversations to identify their structure, decision points, and possible scenarios. Your task is to:
-                    1. Identify the key decision points and their possible variables.
-                    2. Define each variable and its possible values (e.g., customer status: existing or new).
-                    3. Generate an exhaustive list of scenarios that represent all potential branches of the conversation.
+                "content": """You are an expert in analyzing call conversations between a customer and a customer service agent to identify their structure, decision points, and possible scenarios. Your task is to:
+                    1. Identify the key decision points and their possible variables. These will be the questions that were asked by the agent.
+                    2. Define each decision point and its possible values (e.g., customer status: existing or new).
+                    3. Generate an exhaustive list of scenarios that would capture all potential branches of the conversation.
 
                     Respond in the following fixed JSON format:
                     {
@@ -61,15 +61,49 @@ class ConversationAnalyzer:
 
     def generate_prompt(self, scenario: str) -> str:
         messages = [
-            {"role": "system", "content": "You are given a scenario that a real person is facing and you need to create a system prompt for an LLM to behave like that real person in that scenario."},
-            {"role": "user", "content": f"Create a system prompt for an LLM to perform like a real person in this scenario: {scenario}. It has to make an LLM embody this scenario and answer questions like a real person would in this scenario"}
+            {"role": "system", "content": """You are an expert at creating prompts that simulate realistic customer behavior.
+            
+            Create prompts that will make an LLM act like a customer who:
+            - Has specific personal details (name, address, account numbers, etc.)
+            - Speaks naturally and conversationally
+            - Has realistic emotions and reactions
+            - Will respond to questions from a customer service agent
+            - Has a clear backstory and context
+            
+            The prompt should help the LLM roleplay as a realistic customer who:
+            1. ONLY answers the questions the agent asks
+            2. Has consistent personal details throughout the conversation
+            3. Shows authentic emotions and concerns
+            4. Responds with varying levels of patience/frustration
+            5. Has realistic expectations and reactions"""},
+            
+            {"role": "user", "content": f"""Create a prompt that will make an LLM act like a customer in this scenario: {scenario}
+            
+            Format your response to include both personal details and emotional context.
+            
+            Here's an example of the format:
+            "You are Sarah Johnson, a customer who is facing a broken AC at their house: 123 Maple Street, Portland, OR 97201. 
+            
+            Use these specific details consistently in your responses:
+            - Name: Sarah Johnson
+            - Address: 123 Maple Street, Portland, OR 97201
+            - Phone: (503) 555-0123
+            - Account: #12345
+            - Problem: AC is broken
+            
+            When speaking with the agent:
+            - Express your concern
+            - Provide your details when asked
+            - DO NOT end the conversation. ONLY the agent will end the conversation.
+            
+            Now, create a similar prompt for the given scenario: {scenario}"""}
         ]
 
         response = self.client.chat.completions.create(
             model="gpt-4",
             messages=messages,
             temperature=0.7,
-            max_tokens=200
+            max_tokens=500
         )
 
         return response.choices[0].message.content

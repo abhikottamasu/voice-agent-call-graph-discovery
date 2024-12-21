@@ -17,6 +17,8 @@ class VoiceAgentDiscovery:
         self.discovered_scenarios: Set[str] = set()
 
     def discover_scenarios(self, phone_number: str, initial_prompt: str) -> None:
+        initial_prompt = self.analyzer.generate_prompt(initial_prompt)
+        print(f"\nInitial prompt: {initial_prompt} \n")
         scenarios_to_explore = [(initial_prompt, [])]
         
         while scenarios_to_explore:
@@ -52,6 +54,7 @@ class VoiceAgentDiscovery:
             for scenario in new_scenarios:
                 if scenario not in self.discovered_scenarios:
                     self.discovered_scenarios.add(scenario)
+                    print(f"\n Discovered scenario: {scenario} \n")
                     scenario_prompt = self.analyzer.generate_prompt(scenario)
                     scenarios_to_explore.append((scenario_prompt, current_path))
             

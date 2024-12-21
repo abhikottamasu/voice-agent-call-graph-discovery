@@ -3,6 +3,7 @@ from typing import Dict
 import os
 from pathlib import Path
 import time
+import shutil
 
 class HammingClient:
     def __init__(self, api_token: str, base_url: str):
@@ -13,8 +14,10 @@ class HammingClient:
             "Content-Type": "application/json"
         }
         
-        # Create recordings directory if it doesn't exist
+        # Create recordings directory (delete if exists)
         self.recordings_dir = Path("recordings")
+        if self.recordings_dir.exists():
+            shutil.rmtree(self.recordings_dir)
         self.recordings_dir.mkdir(exist_ok=True)
 
     def start_call(self, phone_number: str, prompt: str, webhook_url: str) -> Dict:

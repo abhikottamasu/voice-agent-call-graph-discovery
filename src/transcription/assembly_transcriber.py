@@ -3,6 +3,7 @@ import assemblyai as aai
 from pathlib import Path
 import time
 import os
+import shutil
 
 class BaseTranscriber(ABC):
     @abstractmethod
@@ -18,8 +19,10 @@ class AssemblyTranscriber(BaseTranscriber):
         )
         self.client = aai.Transcriber()
         
-        # Create transcripts directory if it doesn't exist
+        # Create transcripts directory (delete if exists)
         self.transcripts_dir = Path("transcripts")
+        if self.transcripts_dir.exists():
+            shutil.rmtree(self.transcripts_dir)
         self.transcripts_dir.mkdir(exist_ok=True)
 
     def transcribe(self, audio_file_path):

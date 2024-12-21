@@ -21,7 +21,7 @@ def main():
     ]
 
     for phone in phone_numbers:
-        discovery.discover_scenarios(phone, "Initial customer inquiry")
+        discovery.discover_scenarios(phone, "Customer calling to report an issue with their AC")
 
 if __name__ == "__main__":
     main()
