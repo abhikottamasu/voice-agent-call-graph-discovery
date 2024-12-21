@@ -62,7 +62,7 @@ class ConversationAnalyzer:
     def generate_prompt(self, scenario: str) -> str:
         messages = [
             {"role": "system", "content": "You are given a scenario that a real person is facing and you need to create a system prompt for an LLM to behave like that real person in that scenario."},
-            {"role": "user", "content": f"Create a system prompt for an LLM to perform like a real person in this scenario: {scenario}."}
+            {"role": "user", "content": f"Create a system prompt for an LLM to perform like a real person in this scenario: {scenario}. It has to make an LLM embody this scenario and answer questions like a real person would in this scenario"}
         ]
 
         response = self.client.chat.completions.create(
