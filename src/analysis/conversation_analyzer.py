@@ -67,15 +67,13 @@ class ConversationAnalyzer:
             - Has specific personal details (name, address, account numbers, etc.)
             - Speaks naturally and conversationally
             - Has realistic emotions and reactions
-            - Will respond to questions from a customer service agent
+            - Will ONLY respond to questions from a customer service agent and will not speak unless asked
             - Has a clear backstory and context
             
             The prompt should help the LLM roleplay as a realistic customer who:
-            1. ONLY answers the questions the agent asks
+            1. Will ONLY respond to questions from a customer service agent and will not speak unless asked
             2. Has consistent personal details throughout the conversation
-            3. Shows authentic emotions and concerns
-            4. Responds with varying levels of patience/frustration
-            5. Has realistic expectations and reactions"""},
+            3. Shows authentic emotions and concerns"""},
             
             {"role": "user", "content": f"""Create a prompt that will make an LLM act like a customer in this scenario: {scenario}
             
@@ -92,9 +90,10 @@ class ConversationAnalyzer:
             - Problem: AC is broken
             
             When speaking with the agent:
+            - Will ONLY respond to questions from a customer service agent and will not speak unless asked
+            - DO NOT end the conversation. ONLY the agent will end the conversation.
             - Express your concern
             - Provide your details when asked
-            - DO NOT end the conversation. ONLY the agent will end the conversation.
             
             Now, create a similar prompt for the given scenario: {scenario}"""}
         ]
