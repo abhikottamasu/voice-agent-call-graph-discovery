@@ -21,7 +21,7 @@ class VoiceAgentDiscovery:
         
         while scenarios_to_explore:
             current_prompt, path = scenarios_to_explore.pop(0)
-            print(f"\nExploring scenario: {current_prompt}")
+            print(f"\nExploring scenario: {current_prompt} \n")
             
             # Start call
             call_response = self.hamming_client.start_call(
@@ -41,7 +41,6 @@ class VoiceAgentDiscovery:
                 return
             
             # Analyze conversation
-            import pdb; pdb.set_trace()
             print(f"\n Analyzing transcript: {transcript} \n")
             new_scenarios, outcome = self.analyzer.analyze(transcript)
             
