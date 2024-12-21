@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import assemblyai as aai
 from pathlib import Path
+import time
 
 class BaseTranscriber(ABC):
     @abstractmethod
@@ -8,28 +9,27 @@ class BaseTranscriber(ABC):
         pass
 
 class AssemblyTranscriber(BaseTranscriber):
-    def __init__(self, api_key: str):
-        self.client = aai.Client(api_key=api_key)
+    def __init__(self, api_key):
+        aai.settings.api_key = api_key
+        self.client = aai.Transcriber()
 
-    def transcribe(self, audio_path: str) -> str:
+    def transcribe(self, audio_file_path):
         try:
-            config = aai.TranscriptionConfig(
-                speaker_labels=True,
-                language_code="en"
-            )
+            # Create an AudioFile object
+            audio = aai.AudioFile(audio_file_path)
             
-            transcript = self.client.transcribe(
-                audio_path,
-                config=config
-            )
-
-            while transcript.status != 'completed':
-                transcript = self.client.wait_for_completion(transcript)
+            # Transcribe the local file
+            transcript = audio.transcribe()
             
-            return self._format_transcript(transcript)
-        
-        finally:
-            Path(audio_path).unlink(missing_ok=True)
+            # Wait for completion
+            if transcript.status == aai.TranscriptStatus.error:
+                print(transcript.error)
+            else:
+                return transcript.text
+            
+        except Exception as e:
+            print(f"Detailed error: {str(e)}")
+            raise
 
     def _format_transcript(self, transcript) -> str:
         formatted_transcript = ""
