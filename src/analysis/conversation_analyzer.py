@@ -77,7 +77,7 @@ class ConversationAnalyzer:
             
             {"role": "user", "content": f"""Create a prompt that will make an LLM act like a customer in this scenario: {scenario}
             
-            Format your response to include both personal details and emotional context.
+            Retain all information from the original scenairo. Format your response to include both personal details and emotional context.
             
             Here's an example of the format:
             "You are Sarah Johnson, a customer who is facing a broken AC at their house: 123 Maple Street, Portland, OR 97201. 
@@ -90,6 +90,7 @@ class ConversationAnalyzer:
             - Problem: AC is broken
             
             When speaking with the agent:
+            - DO NOT interrupt the agent and only answer when the agent pauses
             - Will ONLY respond to questions from a customer service agent and will not speak unless asked
             - DO NOT end the conversation. ONLY the agent will end the conversation.
             - Express your concern
