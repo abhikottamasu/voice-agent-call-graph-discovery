@@ -27,15 +27,21 @@ class VoiceAgentDiscovery:
             call_response = self.hamming_client.start_call(
                 phone_number, 
                 current_prompt,
-                "https://530f-2600-1700-5168-1220-f157-d417-c1-31fb.ngrok-free.app/webhook"
+                "https://08db-2600-1700-5168-1220-f157-d417-c1-31fb.ngrok-free.app/webhook"
             )
             
-            # Get audio and transcript
-            audio_path = self.hamming_client.download_recording(call_response['id'])
-            transcript = self.transcriber.transcribe(audio_path)
-            import pdb; pdb.set_trace()
+            print("Call started, waiting for completion...")
+            time.sleep(45)
+            
+            try:
+                audio_path = self.hamming_client.download_recording(call_response['id'])
+                transcript = self.transcriber.transcribe(audio_path)
+            except Exception as e:
+                print(f"Error in call processing: {str(e)}")
+                return
             
             # Analyze conversation
+            import pdb; pdb.set_trace()
             new_scenarios, outcome = self.analyzer.analyze(transcript)
             
             # Track scenario

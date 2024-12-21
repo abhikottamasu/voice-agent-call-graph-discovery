@@ -2,7 +2,7 @@ from voice_agent_discovery import VoiceAgentDiscovery
 
 OPENAI_API_KEY = '''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'''
 HAMMING_API_TOKEN = 'sk-2629df12b920117989d58f6ab10ee710'
-HAMMING_BASE_URL = 'https://app.hamming.ai/api/rest/exercise'
+HAMMING_BASE_URL = 'https://app.hamming.ai/api/'
 ASSEMBLY_API_KEY = '5ae53e90d6ec454bb29a32e83555d153'
 
 def main():

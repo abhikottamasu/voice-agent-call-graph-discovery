@@ -17,7 +17,7 @@ def test_transcriber():
     transcriber = AssemblyTranscriber(api_key)
     
     # Path to your test audio file
-    audio_file_path = "/Users/abhikottamasu/Desktop/hammingai-challenge/temp_cm4yiwcjq0186snlwmjdnen6d.wav"  # Update this path
+    audio_file_path = "/Users/abhikottamasu/Desktop/hammingai-challenge/temp_cm4ynacoi01lt9fbj4c481scu.wav"  # Update this path
     
     # Test transcription
     try:
