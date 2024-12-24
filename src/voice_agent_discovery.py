@@ -5,54 +5,37 @@ from graph.scenario_tracker import ScenarioTracker
 from typing import Set, List, Dict, Any
 import time
 
-def is_scenario_discovered(discovered_scenarios: List[List[dict]], candidate_scenario: List[dict]) -> bool:
-    """
-    Compare a candidate scenario with the list of discovered scenarios.
-    Returns True if the candidate matches any existing scenario exactly.
-    
-    Args:
-        discovered_scenarios: List of previously discovered scenarios
-        candidate_scenario: New scenario to check
-        
-    Returns:
-        bool: True if scenario already exists, False otherwise
-    """
-    # If no discovered scenarios, definitely not discovered
-    if not discovered_scenarios:
-        return False
-    
-    # Compare candidate with each discovered scenario
-    for discovered in discovered_scenarios:
-        # First check length
-        if len(discovered) != len(candidate_scenario):
-            continue
-            
-        # Check each dictionary in the list matches exactly
-        matches = True
-        for disc_dict, cand_dict in zip(discovered, candidate_scenario):
-            # Compare keys and values
-            if disc_dict.keys() != cand_dict.keys():
-                matches = False
-                break
-            
-            # Compare values for each key
-            for key in disc_dict:
-                if disc_dict[key] != cand_dict[key]:
-                    matches = False
-                    break
-            
-            if not matches:
-                break
-        
-        # If we found a match, return True
-        if matches:
-            return True
-    
-    # No matches found
-    return False
-
 class VoiceAgentDiscovery:
+    """
+    Orchestrates the discovery of voice agent conversation scenarios.
+
+    Coordinates multiple components to discover and analyze different conversation
+    paths through automated calls, transcription, and analysis.
+
+    Attributes:
+        transcriber (AssemblyTranscriber): Handles audio transcription
+        analyzer (ConversationAnalyzer): Analyzes conversations and generates scenarios
+        hamming_client (HammingClient): Makes automated phone calls
+        tracker (ScenarioTracker): Tracks and visualizes discovered scenarios
+        discovered_scenarios (List[List[dict]]): List of unique scenarios found
+        max_scenarios (int): Maximum number of scenarios to explore
+        existing_questions (Set[str]): Set of known questions
+        existing_outcomes (Set[str]): Set of known outcomes
+    """
+
     def __init__(self, config: dict):
+        """
+        Initialize the voice agent discovery system.
+
+        Sets up all necessary components using the provided configuration.
+
+        Args:
+            config (dict): Configuration dictionary containing:
+                - assembly_api_key: For transcription service
+                - openai_api_key: For conversation analysis
+                - hamming_api_token: For making calls
+                - hamming_base_url: Base URL for Hamming API
+        """
         self.transcriber = AssemblyTranscriber(config['assembly_api_key'])
         self.analyzer = ConversationAnalyzer(config['openai_api_key'])
         self.hamming_client = HammingClient(
@@ -61,20 +44,47 @@ class VoiceAgentDiscovery:
         )
         self.tracker = ScenarioTracker()
         self.discovered_scenarios: List[List[dict]] = []
-        self.max_scenarios = 10  # Maximum number of scenarios to explore
+        self.max_scenarios = 10
+        # Add tracking for questions and outcomes
+        self.existing_questions: Set[str] = set()
+        self.existing_outcomes: Set[str] = set()
 
     def discover_scenarios(self, phone_number: str, initial_prompt: str) -> None:
-        # Initialize with empty question-answer pairs for first prompt
-        print(f"\nInitial prompt: {initial_prompt}")
-        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [])
-        scenarios_to_explore = [(initial_prompt, [])]  # [] represents empty Q&A path
-        scenarios_explored = 0  # Counter for explored scenarios
+        """
+        Execute the scenario discovery process.
+
+        Systematically explores different conversation paths by making calls,
+        analyzing responses, and generating new scenarios based on findings.
+
+        Args:
+            phone_number (str): Target phone number to call
+            initial_prompt (str): Initial conversation scenario to explore
+
+        Example:
+            >>> discovery = VoiceAgentDiscovery(config)
+            >>> discovery.discover_scenarios(
+            ...     "+1234567890",
+            ...     "Customer calling about AC issues"
+            ... )
+
+        Note:
+            - Limits exploration to max_scenarios
+            - Generates visual graph of discovered scenarios
+            - Tracks unique questions and outcomes
+            - Implements breadth-first exploration of scenarios
+        """
+        print(f"\nInitial prompt: {initial_prompt} \n")
+        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [], 
+                                                     self.existing_questions, 
+                                                     self.existing_outcomes)
+        scenarios_to_explore = [(initial_prompt, [])]
+        scenarios_explored = 0
         
         while scenarios_to_explore and scenarios_explored < self.max_scenarios:
             current_prompt, path = scenarios_to_explore.pop(0)
-            scenarios_explored += 1  # Increment counter
-            print(f"\nExploring scenario {scenarios_explored} of {self.max_scenarios}")
+            print(f"\nExploring scenario {scenarios_explored + 1} of {self.max_scenarios}")
             print(f"Exploring Path: {path}")
+            scenarios_explored += 1
             
             # Start call
             call_response = self.hamming_client.start_call(
@@ -104,16 +114,23 @@ class VoiceAgentDiscovery:
             print(f"QA Path {scenarios_explored}: {current_qa_path}")
             print(f"Outcome: {outcome}")
             
-            # Process new scenarios
+            # Update existing questions and outcomes
+            for qa_dict in extracted_qa_pairs:
+                for question in qa_dict.keys():
+                    self.existing_questions.add(question)
+            self.existing_outcomes.add(outcome)
+            
+            # Process new scenarios with existing Q&A knowledge
             for scenario in new_scenarios:
                 if scenarios_explored >= self.max_scenarios:
-                    break  # Stop adpathding new scenarios if we've hit the limit
+                    break
                     
-                # TODO: Use LLM to check if the scenario is already discovered
-                if not is_scenario_discovered(self.discovered_scenarios, scenario):
+                if not self._is_scenario_discovered(self.discovered_scenarios, scenario):
                     self.discovered_scenarios.append(scenario)
                     print(f"\nDiscovered scenario: {scenario} \n")
-                    scenario_prompt = self.analyzer.generate_prompt('', scenario)
+                    scenario_prompt = self.analyzer.generate_prompt('', scenario,
+                                                                 self.existing_questions,
+                                                                 self.existing_outcomes)
                     scenarios_to_explore.append((scenario_prompt, scenario))
             
             print(f"Scenarios explored: {scenarios_explored}/{self.max_scenarios}")
@@ -124,3 +141,52 @@ class VoiceAgentDiscovery:
         print(f"\nRemaining scenarios to explore: {[scenario for _, scenario in scenarios_to_explore]}")
         #print(f"Scenario Map: {self.tracker.export_graph('json')}")
         self.tracker.export_graph('visual')
+
+    @staticmethod
+    def _is_scenario_discovered(discovered_scenarios: List[List[dict]], candidate_scenario: List[dict]) -> bool:
+        """
+        Compare a candidate scenario with the list of discovered scenarios.
+
+        Performs a deep comparison between scenarios to determine if the candidate
+        scenario has already been discovered.
+
+        Args:
+            discovered_scenarios (List[List[dict]]): List of previously discovered scenarios
+            candidate_scenario (List[dict]): New scenario to check for uniqueness
+
+        Returns:
+            bool: True if scenario already exists, False otherwise
+
+        Example:
+            >>> discovered = [[{"Q1": "A1"}, {"Q2": "A2"}]]
+            >>> candidate = [{"Q1": "A1"}, {"Q2": "A2"}]
+            >>> VoiceAgentDiscovery._is_scenario_discovered(discovered, candidate)
+            True
+        """
+        # If no discovered scenarios, definitely not discovered
+        if not discovered_scenarios:
+            return False
+        
+        # Compare candidate with each discovered scenario
+        for discovered in discovered_scenarios:
+            if len(discovered) != len(candidate_scenario):
+                continue
+                
+            matches = True
+            for disc_dict, cand_dict in zip(discovered, candidate_scenario):
+                if disc_dict.keys() != cand_dict.keys():
+                    matches = False
+                    break
+                
+                for key in disc_dict:
+                    if disc_dict[key] != cand_dict[key]:
+                        matches = False
+                        break
+                
+                if not matches:
+                    break
+            
+            if matches:
+                return True
+        
+        return False

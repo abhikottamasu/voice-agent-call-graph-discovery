@@ -1,13 +1,48 @@
 import json
 
 from openai import OpenAI
-from typing import Tuple, List
+from typing import Tuple, List, Set
 
 class ConversationAnalyzer:
+    """
+    A class for analyzing customer service call transcripts and generating conversation scenarios.
+    
+    This analyzer uses OpenAI's GPT models to extract question-answer pairs, identify conversation
+    outcomes, and generate new conversation scenarios based on existing patterns.
+    """
+
     def __init__(self, api_key: str):
+        """
+        Initialize the ConversationAnalyzer with OpenAI API credentials.
+
+        Args:
+            api_key (str): OpenAI API key for authentication
+        """
         self.client = OpenAI(api_key=api_key)
 
     def analyze(self, transcript: str) -> Tuple[List[dict[str, str]], str]:
+        """
+        Analyze a call transcript to extract question-answer pairs and conversation outcome.
+
+        This method processes the transcript to identify key interactions between agent and customer,
+        standardizing questions and answers into a consistent format.
+
+        Args:
+            transcript (str): The text transcript of the customer service call
+
+        Returns:
+            Tuple[List[dict[str, str]], str]: A tuple containing:
+                - List of dictionaries, each containing one question-answer pair
+                - String representing the conversation outcome
+
+        Example:
+            >>> analyzer = ConversationAnalyzer(api_key)
+            >>> qa_pairs, outcome = analyzer.analyze("Are you an existing customer? Yes...")
+            >>> print(qa_pairs)
+            [{"Are you an existing customer?": "Yes"}]
+            >>> print(outcome)
+            "agent_callback"
+        """
         messages = [
             {
                 "role": "system",
@@ -71,7 +106,21 @@ class ConversationAnalyzer:
 
     @staticmethod
     def clean_json_string(json_str: str) -> str:
-        """Clean and validate a JSON string."""
+        """
+        Clean and validate a JSON string for proper parsing.
+
+        Handles various JSON formatting issues including smart quotes, escaped characters,
+        and whitespace to ensure valid JSON structure.
+
+        Args:
+            json_str (str): Raw JSON string to be cleaned
+
+        Returns:
+            str: Cleaned JSON string ready for parsing
+
+        Raises:
+            None: Handles malformed JSON gracefully
+        """
         import re
         
         # Remove any whitespace between the string
@@ -95,6 +144,25 @@ class ConversationAnalyzer:
         return json_str
 
     def generate_scenarios(self, question_answers: List[dict[str, str]]) -> List[str]:
+        """
+        Generate new conversation scenarios based on existing question-answer pairs.
+
+        Creates variations of the original scenario by modifying answers while maintaining
+        question consistency and scenario relevance.
+
+        Args:
+            question_answers (List[dict[str, str]]): List of existing question-answer pairs
+                Each dictionary contains one question-answer pair
+
+        Returns:
+            List[str]: List of new scenario variations
+
+        Example:
+            >>> qa_pairs = [{"Are you an existing customer?": "Yes"}]
+            >>> new_scenarios = analyzer.generate_scenarios(qa_pairs)
+            >>> print(new_scenarios)
+            [[{"Are you an existing customer?": "No"}]]
+        """
         messages = [
             {
                 "role": "system",
@@ -144,15 +212,45 @@ class ConversationAnalyzer:
             print(f"Raw response: {new_scenarios}")
             return []
 
-    def generate_prompt(self, scenario, question_answers) -> str:
+    def generate_prompt(self, scenario: str, question_answers: List[dict[str, str]], 
+                       existing_questions: Set[str], existing_outcomes: Set[str]) -> str:
+        """
+        Generate a conversation prompt for simulating customer responses.
+
+        Creates a detailed prompt that guides response generation while maintaining
+        consistency with existing patterns and encouraging reuse of established
+        questions and outcomes.
+
+        Args:
+            scenario (str): Current conversation scenario
+            question_answers (List[dict[str, str]]): Pre-defined question-answer pairs
+            existing_questions (Set[str]): Set of questions from previous scenarios
+            existing_outcomes (Set[str]): Set of outcomes from previous scenarios
+
+        Returns:
+            str: Formatted prompt for conversation simulation by an LLM
+        """
         # Convert question-answer pairs into a formatted string
         qa_instructions = "\nPre-defined responses:"
         for qa_dict in question_answers:
             for question, answer in qa_dict.items():
                 qa_instructions += f"\n- When asked '{question}' or something similar, respond with: '{answer}'"
         
+        # Add context about existing questions and outcomes
+        context = "\nExisting questions that have been asked in other scenarios:"
+        for question in existing_questions:
+            context += f"\n- {question}"
+        
+        context += "\n\nExisting outcomes that have occurred:"
+        for outcome in existing_outcomes:
+            context += f"\n- {outcome}"
+        
+        context += "\n\nNote: When possible, reuse existing questions and aim for existing outcomes if they fit the scenario. Only create new questions or map scenarios to new outcomes if they are distinctly different."
+        
         prompt = f"""
         {scenario}
+        
+        {context}
         
         {qa_instructions}
         
