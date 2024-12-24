@@ -61,24 +61,29 @@ class VoiceAgentDiscovery:
         )
         self.tracker = ScenarioTracker()
         self.discovered_scenarios: List[List[dict]] = []
+        self.max_scenarios = 10  # Maximum number of scenarios to explore
 
     def discover_scenarios(self, phone_number: str, initial_prompt: str) -> None:
-        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [])
+        # Initialize with empty question-answer pairs for first prompt
         print(f"\nInitial prompt: {initial_prompt} \n")
-        scenarios_to_explore = [(initial_prompt, [])]
+        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [])
+        scenarios_to_explore = [(initial_prompt, [])]  # [] represents empty Q&A path
+        scenarios_explored = 0  # Counter for explored scenarios
         
-        while scenarios_to_explore:
+        while scenarios_to_explore and scenarios_explored < self.max_scenarios:
             current_prompt, path = scenarios_to_explore.pop(0)
-            print(f"\nExploring scenario: {current_prompt} \n")
+            scenarios_explored += 1  # Increment counter
+            print(f"\nExploring scenario {scenarios_explored} of {self.max_scenarios}")
+            print(f"Exploring Path: {path}")
             
             # Start call
             call_response = self.hamming_client.start_call(
                 phone_number, 
                 current_prompt,
-                "https://12b1-2600-1700-5168-1220-f157-d417-c1-31fb.ngrok-free.app/webhook"
+                "https://45de-2600-1700-5168-1220-f157-d417-c1-31fb.ngrok-free.app/webhook"
             )
             
-            print("Call started, waiting for completion...")
+            print("\n Call started, waiting for completion...")
             time.sleep(45)
             
             try:
@@ -89,22 +94,34 @@ class VoiceAgentDiscovery:
                 return
             
             # Analyze conversation
-            print(f"\n Analyzing transcript: {transcript} \n")
-            extracted_scenarios, outcome = self.analyzer.analyze(transcript)
-            new_scenarios = self.analyzer.generate_scenarios(extracted_scenarios)
+            print(f"\nAnalyzing transcript: {transcript} \n")
+            extracted_qa_pairs, outcome = self.analyzer.analyze(transcript)
+            new_scenarios = self.analyzer.generate_scenarios(extracted_qa_pairs)
             
-            # Track scenario
-            current_path = path + [current_prompt]
-            self.tracker.track_scenario(current_path, outcome)
+            # Track scenario with question-answer pairs
+            current_qa_path = extracted_qa_pairs
+            self.tracker.track_scenario(current_qa_path, outcome)
+            print(f"QA Path {scenarios_explored}: {current_qa_path}")
+            print(f"Outcome: {outcome}")
             
+            # Process new scenarios
             for scenario in new_scenarios:
+                if scenarios_explored >= self.max_scenarios:
+                    break  # Stop adpathding new scenarios if we've hit the limit
+                    
+                # TODO: Use LLM to check if the scenario is already discovered
                 if not is_scenario_discovered(self.discovered_scenarios, scenario):
                     self.discovered_scenarios.append(scenario)
                     print(f"\n Discovered scenario: {scenario} \n")
                     scenario_prompt = self.analyzer.generate_prompt('', scenario)
-                    scenarios_to_explore.append((scenario_prompt, current_path))
+                    scenarios_to_explore.append((scenario_prompt, scenario))
             
-            print(f"Outcome: {outcome}")
-            print(f"Remaining scenarios: {len(scenarios_to_explore)}")
+            # print(f"Scenarios explored: {scenarios_explored}/{self.max_scenarios}")
+            print(f"Remaining scenarios to explore: {len(scenarios_to_explore)}")
+            self.tracker.export_graph('visual')
         
+        print(f"\nExploration complete. Explored {scenarios_explored} scenarios.")
+        print(f"Discovered scenarios: {self.discovered_scenarios}")
+        print(f"Remaining scenarios to explore: {(scenarios_to_explore)}")
+        print(f"Scenario Map: {self.tracker.export_graph('json')}")
         self.tracker.export_graph('visual')

@@ -46,7 +46,7 @@ class AssemblyTranscriber(BaseTranscriber):
                 f.write("-" * 50 + "\n\n")
                 f.write(formatted_transcript)
             
-            print(f"Transcript saved to: {transcript_path}")
+            # print(f"Transcript saved to: {transcript_path}")
             return formatted_transcript
             
         except Exception as e:

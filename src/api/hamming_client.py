@@ -44,9 +44,9 @@ class HammingClient:
             )
             
             # Print response info
-            print(f"Response status: {response.status_code}")
-            print(f"Content-Type: {response.headers.get('content-type')}")
-            print(f"Content-Length: {response.headers.get('content-length')} bytes")
+            # print(f"Response status: {response.status_code}")
+            # print(f"Content-Type: {response.headers.get('content-type')}")
+            # print(f"Content-Length: {response.headers.get('content-length')} bytes")
             
             if response.status_code == 404:
                 # Parse error message from JSON
