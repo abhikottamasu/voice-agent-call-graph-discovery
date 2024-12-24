@@ -53,14 +53,15 @@ def main():
     discovery = VoiceAgentDiscovery(config)
     
     phone_numbers = [
-        "+14153580761",  # AC and Plumbing
-        "+16508798564"   # Auto Dealership
+        ("+14153580761", "Customer calling to report an issue with their AC"),  # AC and Plumbing
+        ("+16508798564", "Customer calling to buy a new car")   # Auto Dealership
     ]
-    phone_number_to_call = phone_numbers[0]
+    phone_number_to_call = phone_numbers[1][0]
+    input_scenario = phone_numbers[1][1]
 
     discovery.discover_scenarios(
         phone_number_to_call,
-        "Customer calling to report an issue with their AC"
+        input_scenario
     )
 
 if __name__ == "__main__":
