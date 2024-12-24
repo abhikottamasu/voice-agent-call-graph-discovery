@@ -137,9 +137,7 @@ class VoiceAgentDiscovery:
             self.tracker.export_graph('visual')
         
         print(f"\nExploration complete. Explored {scenarios_explored} scenarios.")
-        # print(f"Discovered scenarios: {self.discovered_scenarios}")
         print(f"\nRemaining scenarios to explore: {[scenario for _, scenario in scenarios_to_explore]}")
-        #print(f"Scenario Map: {self.tracker.export_graph('json')}")
         self.tracker.export_graph('visual')
 
     @staticmethod

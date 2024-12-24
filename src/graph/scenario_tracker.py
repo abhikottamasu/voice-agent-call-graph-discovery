@@ -191,19 +191,19 @@ class ScenarioTracker:
             nx.draw_networkx_nodes(self.nx_graph, pos,
                                  nodelist=start_nodes,
                                  node_color='lightgray',
-                                 node_size=7000,
+                                 node_size=3500,
                                  node_shape='s')
             
             nx.draw_networkx_nodes(self.nx_graph, pos, 
                                  nodelist=regular_nodes,
                                  node_color='lightblue',
-                                 node_size=7000,
+                                 node_size=3500,
                                  node_shape='o')
             
             nx.draw_networkx_nodes(self.nx_graph, pos,
                                  nodelist=outcome_nodes,
                                  node_color='lightgreen',
-                                 node_size=7000,
+                                 node_size=3500,
                                  node_shape='d')
             
             # Modified edge drawing to handle multiple edges without duplicates
@@ -245,7 +245,7 @@ class ScenarioTracker:
                         # Adjust label position for curved edges
                         y += offset * 0.5
                     plt.text(x, y, answer if len(answer) < 20 else answer[:17] + '...',
-                            fontsize=12,
+                            fontsize=8,
                             bbox=dict(facecolor='white', edgecolor='none', alpha=0.7),
                             horizontalalignment='center',
                             verticalalignment='center')
@@ -279,7 +279,7 @@ class ScenarioTracker:
                 self.nx_graph,
                 pos,
                 labels=labels,
-                font_size=12  # Increased font size
+                font_size=8
             )
             
             plt.savefig('conversation_graph.png', bbox_inches='tight', dpi=300)
