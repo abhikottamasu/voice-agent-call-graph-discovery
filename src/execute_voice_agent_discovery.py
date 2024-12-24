@@ -19,9 +19,9 @@ def main():
         "+14153580761",  # AC and Plumbing
         "+16508798564"   # Auto Dealership
     ]
+    phone_number_to_call = phone_numbers[0]
 
-    for phone in phone_numbers:
-        discovery.discover_scenarios(phone, "Customer calling to report an issue with their AC")
+    discovery.discover_scenarios(phone_number_to_call, "Customer calling to report an issue with their AC")
 
 if __name__ == "__main__":
     main()

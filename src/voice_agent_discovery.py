@@ -112,7 +112,7 @@ class VoiceAgentDiscovery:
                 # TODO: Use LLM to check if the scenario is already discovered
                 if not is_scenario_discovered(self.discovered_scenarios, scenario):
                     self.discovered_scenarios.append(scenario)
-                    print(f"\n Discovered scenario: {scenario} \n")
+                    print(f"\nDiscovered scenario: {scenario} \n")
                     scenario_prompt = self.analyzer.generate_prompt('', scenario)
                     scenarios_to_explore.append((scenario_prompt, scenario))
             

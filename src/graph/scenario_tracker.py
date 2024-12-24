@@ -74,39 +74,60 @@ class ScenarioTracker:
             return json.dumps(graph_data, indent=2)
         
         elif format == 'visual':
-            plt.figure(figsize=(15, 10))
-            pos = nx.spring_layout(self.nx_graph, k=1, iterations=50)
+            plt.figure(figsize=(20, 15))  # Increased figure size
             
-            # Draw nodes with different colors for outcomes
+            # Use kamada_kawai layout
+            pos = nx.kamada_kawai_layout(self.nx_graph)
+            
+            # Center Call Start at the top
+            max_y = max(coord[1] for coord in pos.values())
+            pos["Call Start"] = (0.5, max_y + 0.2)  # Center x-coordinate at 0.5
+            
+            # Adjust outcome nodes to be at the bottom
+            outcome_nodes = [node for node in self.nx_graph.nodes() if node.startswith("Outcome:")]
+            min_y = min(coord[1] for coord in pos.values())
+            for node in outcome_nodes:
+                pos[node] = (pos[node][0], min_y - 0.2)
+            
+            # Categorize nodes
             regular_nodes = [node for node in self.nx_graph.nodes() 
-                           if not node.startswith("Outcome:") and node not in ["Call Start"]]
+                           if not node.startswith("Outcome:") and node != "Call Start"]
             outcome_nodes = [node for node in self.nx_graph.nodes() 
                            if node.startswith("Outcome:")]
-            start_nodes = [node for node in self.nx_graph.nodes() 
-                         if node in ["Call Start"]]
+            start_nodes = ["Call Start"]
             
-            # Draw different types of nodes
-            nx.draw_networkx_nodes(self.nx_graph, pos, 
-                                 nodelist=regular_nodes,
-                                 node_color='lightblue',
-                                 node_size=3000)
-            nx.draw_networkx_nodes(self.nx_graph, pos,
-                                 nodelist=outcome_nodes,
-                                 node_color='lightgreen',
-                                 node_size=3000)
+            # Draw nodes with different shapes and colors
+            # Square for Call Start
             nx.draw_networkx_nodes(self.nx_graph, pos,
                                  nodelist=start_nodes,
                                  node_color='lightgray',
-                                 node_size=3000)
+                                 node_size=7000,  # Increased size
+                                 node_shape='s')  # Square shape
             
-            # Draw edges with arrows
+            # Circles for questions
+            nx.draw_networkx_nodes(self.nx_graph, pos, 
+                                 nodelist=regular_nodes,
+                                 node_color='lightblue',
+                                 node_size=7000,  # Increased size
+                                 node_shape='o')  # Circle shape
+            
+            # Diamonds for outcomes
+            nx.draw_networkx_nodes(self.nx_graph, pos,
+                                 nodelist=outcome_nodes,
+                                 node_color='lightgreen',
+                                 node_size=7000,  # Increased size
+                                 node_shape='d')  # Diamond shape
+            
+            # Draw edges with more prominent arrows
             nx.draw_networkx_edges(self.nx_graph, pos,
                                  arrows=True,
-                                 arrowsize=20,  # Increase arrow size
+                                 arrowsize=30,  # Increased arrow size
                                  edge_color='gray',
-                                 width=2)
+                                 width=3,       # Increased edge width
+                                 arrowstyle='->',  # Explicit arrow style
+                                 connectionstyle='arc3,rad=0.1')  # Slightly curved edges
             
-            # Rest of the label handling code remains the same
+            # Draw labels with larger font
             labels = {}
             for node in self.nx_graph.nodes():
                 if len(str(node)) > 20:
@@ -135,9 +156,10 @@ class ScenarioTracker:
                 self.nx_graph,
                 pos,
                 labels=labels,
-                font_size=8
+                font_size=12  # Increased font size
             )
             
+            # Draw edge labels with much larger font
             edge_labels = nx.get_edge_attributes(self.nx_graph, 'answer')
             wrapped_edge_labels = {k: v if len(v) < 20 else v[:17] + '...' 
                                  for k, v in edge_labels.items()}
@@ -146,7 +168,8 @@ class ScenarioTracker:
                 self.nx_graph,
                 pos,
                 edge_labels=wrapped_edge_labels,
-                font_size=6
+                font_size=12,  # Much larger font size for edge labels
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)  # Add background to edge labels
             )
             
             plt.savefig('conversation_graph.png', bbox_inches='tight', dpi=300)
