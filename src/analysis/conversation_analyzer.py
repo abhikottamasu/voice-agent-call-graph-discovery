@@ -245,8 +245,9 @@ class ConversationAnalyzer:
         for outcome in existing_outcomes:
             context += f"\n- {outcome}"
         
-        context += "\n\nNote: When possible, reuse existing questions and aim for existing outcomes if they fit the scenario. Only create new questions or map scenarios to new outcomes if they are distinctly different."
-        
+        context += "\n\nNote: When possible, reuse existing questions and existing outcomes if they fit the scenario. Only create new questions or map scenarios to new outcomes if they are distinctly different."
+        context += "\n\nREMEMBER that often a question could be the same to an existing question with the only difference being punctuation or niceties. For example 'Can I have your name?' and 'Can I have your name please?' are the same question. In this case you would reuse the existing question!"
+
         prompt = f"""
         {scenario}
         
