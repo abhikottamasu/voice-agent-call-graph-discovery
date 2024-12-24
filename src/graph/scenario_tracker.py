@@ -7,8 +7,8 @@ class ScenarioTracker:
     def __init__(self):
         self.conversation_graph = {}
         self.nx_graph = nx.DiGraph()
-        # Add start node
-        self.nx_graph.add_node("Start")
+        # Only add Call Start node
+        self.nx_graph.add_node("Call Start")
 
     def track_scenario(self, path: List[dict], outcome: str) -> None:
         """
@@ -18,18 +18,14 @@ class ScenarioTracker:
             path: List of dictionaries, each containing one question-answer pair
             outcome: The final outcome of the conversation
         """
-        previous_question = ("Start", None)  # Start from the Start node
-        
-        # Add Call Start node and connect it to first question
-        call_start = "Call Start"
-        if call_start not in self.nx_graph:
-            self.nx_graph.add_node(call_start)
-            self.nx_graph.add_edge("Start", call_start, answer="begin call")
+        previous_question = ("Call Start", "begin call")  # Start from Call Start
         
         # Connect Call Start to first question if path exists
         if path and path[0]:
             first_question = next(iter(path[0].keys()))
-            self.nx_graph.add_edge(call_start, first_question, answer="starts")
+            if first_question not in self.nx_graph:
+                self.nx_graph.add_node(first_question)
+            self.nx_graph.add_edge("Call Start", first_question, answer="begin call")
         
         for qa_dict in path:
             for question, answer in qa_dict.items():
@@ -38,7 +34,7 @@ class ScenarioTracker:
                     self.nx_graph.add_node(question)
                 
                 # If there's a previous question, add an edge from it to current question
-                if previous_question[1]:  # Skip if it's the start node's None answer
+                if previous_question[0] != "Call Start":  # Skip if it's the Call Start node
                     self.nx_graph.add_edge(
                         previous_question[0],
                         question,
@@ -49,7 +45,7 @@ class ScenarioTracker:
         
         # Add the final outcome
         outcome_node = f"Outcome: {outcome}"
-        self.nx_graph.add_node(outcome_node, is_outcome=True)  # Mark as outcome node
+        self.nx_graph.add_node(outcome_node, is_outcome=True)
         if previous_question:
             self.nx_graph.add_edge(
                 previous_question[0],
@@ -74,22 +70,47 @@ class ScenarioTracker:
             return json.dumps(graph_data, indent=2)
         
         elif format == 'visual':
-            plt.figure(figsize=(20, 15))  # Increased figure size
+            plt.figure(figsize=(20, 15))
             
-            # Use kamada_kawai layout
-            pos = nx.kamada_kawai_layout(self.nx_graph)
+            # Start with basic layout
+            pos = nx.spring_layout(self.nx_graph)
             
-            # Center Call Start at the top
-            max_y = max(coord[1] for coord in pos.values())
-            pos["Call Start"] = (0.5, max_y + 0.2)  # Center x-coordinate at 0.5
+            # Create layers based on distance from Call Start
+            layers = {}
+            layers[0] = ["Call Start"]
             
-            # Adjust outcome nodes to be at the bottom
-            outcome_nodes = [node for node in self.nx_graph.nodes() if node.startswith("Outcome:")]
-            min_y = min(coord[1] for coord in pos.values())
-            for node in outcome_nodes:
-                pos[node] = (pos[node][0], min_y - 0.2)
+            # Find all paths from Call Start to identify question order
+            paths = []
+            for node in self.nx_graph.nodes():
+                if node != "Call Start" and not node.startswith("Outcome:"):
+                    try:
+                        path = nx.shortest_path(self.nx_graph, "Call Start", node)
+                        paths.append(path)
+                    except nx.NetworkXNoPath:
+                        continue
             
-            # Categorize nodes
+            # Group nodes by their layer (distance from Call Start)
+            max_layer = 1
+            for path in paths:
+                for i, node in enumerate(path[1:], 1):  # Skip Call Start
+                    if i not in layers:
+                        layers[i] = []
+                    if node not in layers[i]:
+                        layers[i].append(node)
+                    max_layer = max(max_layer, i)
+            
+            # Add outcomes to the final layer
+            outcome_layer = max_layer + 1
+            layers[outcome_layer] = [node for node in self.nx_graph.nodes() if node.startswith("Outcome:")]
+            
+            # Position nodes in layers
+            for layer, nodes in layers.items():
+                y_coord = 1.0 - (layer * (1.0 / (len(layers) + 1)))  # Distribute layers evenly
+                for i, node in enumerate(nodes):
+                    x_coord = (i + 1) / (len(nodes) + 1)  # Distribute nodes within layer
+                    pos[node] = (x_coord, y_coord)
+            
+            # Rest of the drawing code remains the same
             regular_nodes = [node for node in self.nx_graph.nodes() 
                            if not node.startswith("Outcome:") and node != "Call Start"]
             outcome_nodes = [node for node in self.nx_graph.nodes() 
@@ -97,35 +118,30 @@ class ScenarioTracker:
             start_nodes = ["Call Start"]
             
             # Draw nodes with different shapes and colors
-            # Square for Call Start
             nx.draw_networkx_nodes(self.nx_graph, pos,
                                  nodelist=start_nodes,
                                  node_color='lightgray',
-                                 node_size=7000,  # Increased size
-                                 node_shape='s')  # Square shape
+                                 node_size=7000,
+                                 node_shape='s')
             
-            # Circles for questions
             nx.draw_networkx_nodes(self.nx_graph, pos, 
                                  nodelist=regular_nodes,
                                  node_color='lightblue',
-                                 node_size=7000,  # Increased size
-                                 node_shape='o')  # Circle shape
+                                 node_size=7000,
+                                 node_shape='o')
             
-            # Diamonds for outcomes
             nx.draw_networkx_nodes(self.nx_graph, pos,
                                  nodelist=outcome_nodes,
                                  node_color='lightgreen',
-                                 node_size=7000,  # Increased size
-                                 node_shape='d')  # Diamond shape
+                                 node_size=7000,
+                                 node_shape='d')
             
-            # Draw edges with more prominent arrows
+            # Draw straight edges with arrows
             nx.draw_networkx_edges(self.nx_graph, pos,
                                  arrows=True,
-                                 arrowsize=30,  # Increased arrow size
+                                 arrowsize=30,
                                  edge_color='gray',
-                                 width=3,       # Increased edge width
-                                 arrowstyle='->',  # Explicit arrow style
-                                 connectionstyle='arc3,rad=0.1')  # Slightly curved edges
+                                 width=3)
             
             # Draw labels with larger font
             labels = {}
