@@ -65,7 +65,7 @@ class VoiceAgentDiscovery:
 
     def discover_scenarios(self, phone_number: str, initial_prompt: str) -> None:
         # Initialize with empty question-answer pairs for first prompt
-        print(f"\nInitial prompt: {initial_prompt} \n")
+        print(f"\nInitial prompt: {initial_prompt}")
         initial_prompt = self.analyzer.generate_prompt(initial_prompt, [])
         scenarios_to_explore = [(initial_prompt, [])]  # [] represents empty Q&A path
         scenarios_explored = 0  # Counter for explored scenarios
@@ -83,7 +83,7 @@ class VoiceAgentDiscovery:
                 "https://45de-2600-1700-5168-1220-f157-d417-c1-31fb.ngrok-free.app/webhook"
             )
             
-            print("\n Call started, waiting for completion...")
+            print("\nCall started, waiting for completion...")
             time.sleep(45)
             
             try:
