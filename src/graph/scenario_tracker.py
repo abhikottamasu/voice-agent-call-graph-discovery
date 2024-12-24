@@ -6,8 +6,7 @@ from typing import List, Any
 class ScenarioTracker:
     def __init__(self):
         self.conversation_graph = {}
-        self.nx_graph = nx.DiGraph()
-        # Only add Call Start node
+        self.nx_graph = nx.MultiDiGraph()
         self.nx_graph.add_node("Call Start")
 
     def track_scenario(self, path: List[dict], outcome: str) -> None:
@@ -18,7 +17,7 @@ class ScenarioTracker:
             path: List of dictionaries, each containing one question-answer pair
             outcome: The final outcome of the conversation
         """
-        previous_question = ("Call Start", "begin call")  # Start from Call Start
+        previous_question = ("Call Start", "begin call")
         
         # Connect Call Start to first question if path exists
         if path and path[0]:
@@ -29,12 +28,10 @@ class ScenarioTracker:
         
         for qa_dict in path:
             for question, answer in qa_dict.items():
-                # Add question as node if it doesn't exist
                 if question not in self.nx_graph:
                     self.nx_graph.add_node(question)
                 
-                # If there's a previous question, add an edge from it to current question
-                if previous_question[0] != "Call Start":  # Skip if it's the Call Start node
+                if previous_question[0] != "Call Start":
                     self.nx_graph.add_edge(
                         previous_question[0],
                         question,
@@ -43,7 +40,6 @@ class ScenarioTracker:
                 
                 previous_question = (question, answer)
         
-        # Add the final outcome
         outcome_node = f"Outcome: {outcome}"
         self.nx_graph.add_node(outcome_node, is_outcome=True)
         if previous_question:
@@ -55,16 +51,17 @@ class ScenarioTracker:
 
     def export_graph(self, format: str = 'json') -> Any:
         if format == 'json':
-            # Convert networkx graph to JSON format
+            # Modified JSON format to handle multiple edges
             graph_data = {
                 "nodes": list(self.nx_graph.nodes()),
                 "edges": [
                     {
                         "from": u,
                         "to": v,
-                        "answer": data.get("answer", "")
+                        "answer": data.get("answer", ""),
+                        "key": k  # Include edge key for multiple edges
                     }
-                    for u, v, data in self.nx_graph.edges(data=True)
+                    for u, v, k, data in self.nx_graph.edges(data=True, keys=True)
                 ]
             }
             return json.dumps(graph_data, indent=2)
@@ -136,12 +133,25 @@ class ScenarioTracker:
                                  node_size=7000,
                                  node_shape='d')
             
-            # Draw straight edges with arrows
-            nx.draw_networkx_edges(self.nx_graph, pos,
-                                 arrows=True,
-                                 arrowsize=30,
-                                 edge_color='gray',
-                                 width=3)
+            # Modified edge drawing to handle multiple edges
+            for edge in self.nx_graph.edges(data=True, keys=True):
+                u, v, k, data = edge
+                # Calculate edge offset for multiple edges between same nodes
+                offset = 0.2 if k % 2 == 0 else -0.2
+                
+                # Draw each edge with a slight offset
+                edge_pos = [(pos[u][0], pos[u][1]), (pos[v][0], pos[v][1])]
+                nx.draw_networkx_edges(self.nx_graph.subgraph([u, v]),
+                                     {u: (pos[u][0], pos[u][1] + offset),
+                                      v: (pos[v][0], pos[v][1] + offset)},
+                                     edgelist=[(u, v, k)],
+                                     arrows=True,
+                                     arrowsize=50,
+                                     edge_color='black',
+                                     width=2,
+                                     arrowstyle='-|>',
+                                     min_source_margin=25,
+                                     min_target_margin=25)
             
             # Draw labels with larger font
             labels = {}
@@ -175,18 +185,21 @@ class ScenarioTracker:
                 font_size=12  # Increased font size
             )
             
-            # Draw edge labels with much larger font
-            edge_labels = nx.get_edge_attributes(self.nx_graph, 'answer')
-            wrapped_edge_labels = {k: v if len(v) < 20 else v[:17] + '...' 
-                                 for k, v in edge_labels.items()}
+            # Modified edge label drawing to handle multiple edges
+            edge_labels = {}
+            for u, v, k, data in self.nx_graph.edges(data=True, keys=True):
+                edge_labels[(u, v, k)] = data.get('answer', '')
             
-            nx.draw_networkx_edge_labels(
-                self.nx_graph,
-                pos,
-                edge_labels=wrapped_edge_labels,
-                font_size=12,  # Much larger font size for edge labels
-                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)  # Add background to edge labels
-            )
+            # Draw edge labels with offsets
+            for (u, v, k), label in edge_labels.items():
+                offset = 0.2 if k % 2 == 0 else -0.2
+                x = (pos[u][0] + pos[v][0]) / 2
+                y = (pos[u][1] + pos[v][1]) / 2 + offset
+                plt.text(x, y, label if len(label) < 20 else label[:17] + '...',
+                        fontsize=12,
+                        bbox=dict(facecolor='white', edgecolor='none', alpha=0.7),
+                        horizontalalignment='center',
+                        verticalalignment='center')
             
             plt.savefig('conversation_graph.png', bbox_inches='tight', dpi=300)
             return 'conversation_graph.png' 

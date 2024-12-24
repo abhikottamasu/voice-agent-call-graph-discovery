@@ -116,12 +116,11 @@ class VoiceAgentDiscovery:
                     scenario_prompt = self.analyzer.generate_prompt('', scenario)
                     scenarios_to_explore.append((scenario_prompt, scenario))
             
-            # print(f"Scenarios explored: {scenarios_explored}/{self.max_scenarios}")
-            print(f"Remaining scenarios to explore: {len(scenarios_to_explore)}")
+            print(f"Scenarios explored: {scenarios_explored}/{self.max_scenarios}")
             self.tracker.export_graph('visual')
         
         print(f"\nExploration complete. Explored {scenarios_explored} scenarios.")
-        print(f"Discovered scenarios: {self.discovered_scenarios}")
-        print(f"Remaining scenarios to explore: {(scenarios_to_explore)}")
-        print(f"Scenario Map: {self.tracker.export_graph('json')}")
+        # print(f"Discovered scenarios: {self.discovered_scenarios}")
+        print(f"\nRemaining scenarios to explore: {[scenario for _, scenario in scenarios_to_explore]}")
+        #print(f"Scenario Map: {self.tracker.export_graph('json')}")
         self.tracker.export_graph('visual')
