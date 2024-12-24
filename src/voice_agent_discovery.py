@@ -44,14 +44,15 @@ class VoiceAgentDiscovery:
             
             # Analyze conversation
             print(f"\n Analyzing transcript: {transcript} \n")
-            new_scenarios, outcome = self.analyzer.analyze(transcript)
+            extracted_scenarios, outcome = self.analyzer.analyze(transcript)
+            new_scenarios = self.analyzer.generate_scenarios(extracted_scenarios)
             
             # Track scenario
             current_path = path + [current_prompt]
             self.tracker.track_scenario(current_path, outcome)
             
-            # Process new scenarios
             for scenario in new_scenarios:
+                # TODO: define custom comparator for scenarios
                 if scenario not in self.discovered_scenarios:
                     self.discovered_scenarios.add(scenario)
                     print(f"\n Discovered scenario: {scenario} \n")

@@ -7,28 +7,24 @@ class ConversationAnalyzer:
     def __init__(self, api_key: str):
         self.client = OpenAI(api_key=api_key)
 
-    def analyze(self, transcript: str) -> Tuple[List[str], str]:
+    def analyze(self, transcript: str) -> Tuple[List[dict[str, str]], str]:
         messages = [
             {
                 "role": "system",
-                "content": """You are an expert in analyzing call conversations between a customer and a customer service agent to identify their structure, decision points, and possible scenarios. Your task is to:
-                    1. Identify the key decision points and their possible variables. These will be the questions that were asked by the agent.
-                    2. Define each decision point and its possible values (e.g., customer status: existing or new).
-                    3. Generate an exhaustive list of scenarios that would capture all potential branches of the conversation.
-
+                "content": """You are an expert in analyzing call conversations between a customer and a customer service agent to identify the questions asked by the agent and the answers given by the customer. Your task is to:
+                    1. Identify the key questions asked by the agent and the answers given by the customer.
+                    2. When creating the list of question-answer pairs, create the list in the order of the conversation.
+                    3. When creating the key and values for the question-answer pairs, use values that are concise.
+                    4. When creating the outcome, use the outcome of the conversation given the specific transcript. The outcome could be 'transfer to an agent', 'cannot help you' or any other terminal state.
+                    5. Make sure to make the outcome a concise string that can be used as a key to compare to the outcomes of other calls. 
+                    
                     Respond in the following fixed JSON format:
                     {
-                        "definitions_of_variables": {
-                            "variable_name_1": "definition_of_variable_1",
-                            "variable_name_2": "definition_of_variable_2",
-                            ...
-                        },
-                        "scenario_list": [
-                            "Scenario 1: Description",
-                            "Scenario 2: Description",
-                            ...
+                        "question_answer_pairs": [
+                            {<Sample Question>: <Sample Answer>},
+                            {<Sample Question>: <Sample Answer>}
                         ],
-                        "outcome": "The outcome of the conversation given the specific transcript"
+                        "outcome": "<Outcome Key>"
                     }
                 """
             },
@@ -38,10 +34,9 @@ class ConversationAnalyzer:
                     {transcript}
 
                     Analyze the conversation and:
-                    1. Identify the key decision points and their possible variables.
-                    2. Define each variable and its possible values.
-                    3. Generate an exhaustive list of scenarios that represent all potential branches of the conversation.
-                    """
+                    1. Identify the key question-answer pairs
+                    2. Identify the outcome of the conversation
+                """
             }
         ]
 
@@ -55,48 +50,20 @@ class ConversationAnalyzer:
         # Extract the response content
         analysis = response.choices[0].message.content
         json_response = json.loads(analysis)
-        scenarios = json_response["scenario_list"]
+        question_answers = json_response["question_answer_pairs"]
         outcome = json_response["outcome"]
-        return scenarios, outcome
+        return question_answers, outcome
 
-    def generate_prompt(self, scenario: str) -> str:
+    def generate_scenarios(self, question_answers: List[dict[str, str]]) -> List[str]:
         messages = [
-            {"role": "system", "content": """You are an expert at creating prompts that simulate realistic customer behavior.
-            
-            Create prompts that will make an LLM act like a customer who:
-            - Has specific personal details (name, address, account numbers, etc.)
-            - Speaks naturally and conversationally
-            - Has realistic emotions and reactions
-            - Will ONLY respond to questions from a customer service agent and will not speak unless asked
-            - Has a clear backstory and context
-            
-            The prompt should help the LLM roleplay as a realistic customer who:
-            1. Will ONLY respond to questions from a customer service agent and will not speak unless asked
-            2. Has consistent personal details throughout the conversation
-            3. Shows authentic emotions and concerns"""},
-            
-            {"role": "user", "content": f"""Create a prompt that will make an LLM act like a customer in this scenario: {scenario}
-            
-            Retain all information from the original scenairo. Format your response to include both personal details and emotional context.
-            
-            Here's an example of the format:
-            "You are Sarah Johnson, a customer who is facing a broken AC at their house: 123 Maple Street, Portland, OR 97201. 
-            
-            Use these specific details consistently in your responses:
-            - Name: Sarah Johnson
-            - Address: 123 Maple Street, Portland, OR 97201
-            - Phone: (503) 555-0123
-            - Account: #12345
-            - Problem: AC is broken
-            
-            When speaking with the agent:
-            - DO NOT interrupt the agent and only answer when the agent pauses
-            - Will ONLY respond to questions from a customer service agent and will not speak unless asked
-            - DO NOT end the conversation. ONLY the agent will end the conversation.
-            - Express your concern
-            - Provide your details when asked
-            
-            Now, create a similar prompt for the given scenario: {scenario}"""}
+            {
+                "role": "system",
+                "content": """You are an expert in generating new variants of scenarios from a list of question-answer pairs. Your task is to:
+                    1. Understand the question-answer pairs.
+                    2. Modify the question-answer pairs to create new variants of the scenario.
+                    3. Return a list of new variants of the scenario in the same format as the input.
+                """
+            }
         ]
 
         response = self.client.chat.completions.create(
@@ -106,4 +73,31 @@ class ConversationAnalyzer:
             max_tokens=500
         )
 
-        return response.choices[0].message.content
+        new_scenarios = response.choices[0].message.content
+        print(new_scenarios)
+        return new_scenarios
+
+    def generate_prompt(self, question_answers: List[dict[str, str]]) -> str:
+        # Convert question-answer pairs into a formatted string
+        qa_instructions = "\nPre-defined responses:"
+        for qa_dict in question_answers:
+            for question, answer in qa_dict.items():
+                qa_instructions += f"\n- When asked '{question}' or something similar, respond with: '{answer}'"
+        
+        prompt = f"""When speaking with the agent:
+- DO NOT interrupt the agent and only answer when the agent asks a question
+- If asked a question similar to the pre-defined ones above, use those responses
+- If asked something different, provide a realistic response based on your character and situation
+- DO NOT volunteer information unless specifically asked
+- DO NOT end the conversation. ONLY the agent will end the conversation
+- Express appropriate emotions based on the scenario
+- Provide your personal details only when asked and feel free to make up details as long as they are consistent with the scenario
+
+Remember:
+1. Stick to the pre-defined answers when the questions match
+2. For new questions, stay in character and provide realistic responses
+3. Only speak when asked a question
+4. Be consistent with your personal details
+5. Show appropriate emotions but remain respectful"""
+
+        return prompt
