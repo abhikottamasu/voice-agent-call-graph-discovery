@@ -11,16 +11,15 @@ Configuration:
     - Target phone numbers for testing
 
 Note:
-    API keys and tokens should be moved to environment variables or a secure
-    configuration management system in a production environment.
+    API keys and tokens are loaded from environment variables (.env file)
 """
 
 from voice_agent_discovery import VoiceAgentDiscovery
+from dotenv import load_dotenv
+import os
 
-OPENAI_API_KEY = '''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'''
-HAMMING_API_TOKEN = 'sk-2629df12b920117989d58f6ab10ee710'
-HAMMING_BASE_URL = 'https://app.hamming.ai/api/'
-ASSEMBLY_API_KEY = '5ae53e90d6ec454bb29a32e83555d153'
+# Load environment variables from .env file
+load_dotenv()
 
 def main():
     """
@@ -43,12 +42,21 @@ def main():
         1. AC and Plumbing service (+14153580761)
         2. Auto Dealership (+16508798564)
     """
+    # Load configuration from environment variables
     config = {
-        'assembly_api_key': ASSEMBLY_API_KEY,
-        'openai_api_key': OPENAI_API_KEY,
-        'hamming_api_token': HAMMING_API_TOKEN,
-        'hamming_base_url': HAMMING_BASE_URL
+        'assembly_api_key': os.getenv('ASSEMBLY_API_KEY'),
+        'openai_api_key': os.getenv('OPENAI_API_KEY'),
+        'hamming_api_token': os.getenv('HAMMING_API_TOKEN'),
+        'hamming_base_url': os.getenv('HAMMING_BASE_URL')
     }
+
+    # Validate all required environment variables are present
+    missing_vars = [key for key, value in config.items() if not value]
+    if missing_vars:
+        raise EnvironmentError(
+            f"Missing required environment variables: {', '.join(missing_vars)}\n"
+            "Please ensure all required variables are set in your .env file."
+        )
 
     discovery = VoiceAgentDiscovery(config)
     

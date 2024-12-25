@@ -74,9 +74,7 @@ class VoiceAgentDiscovery:
             - Implements breadth-first exploration of scenarios
         """
         print(f"\nInitial prompt: {initial_prompt} \n")
-        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [], 
-                                                     self.existing_questions, 
-                                                     self.existing_outcomes)
+        initial_prompt = self.analyzer.generate_prompt(initial_prompt, [])
         scenarios_to_explore = [(initial_prompt, [])]
         scenarios_explored = 0
         
@@ -105,7 +103,11 @@ class VoiceAgentDiscovery:
             
             # Analyze conversation
             print(f"\nAnalyzing transcript: {transcript} \n")
-            extracted_qa_pairs, outcome = self.analyzer.analyze(transcript)
+            extracted_qa_pairs, outcome = self.analyzer.analyze(
+                transcript,
+                existing_questions=self.existing_questions,
+                existing_outcomes=self.existing_outcomes
+            )
             new_scenarios = self.analyzer.generate_scenarios(extracted_qa_pairs)
             
             # Track scenario with question-answer pairs
@@ -128,9 +130,7 @@ class VoiceAgentDiscovery:
                 if not self._is_scenario_discovered(self.discovered_scenarios, scenario):
                     self.discovered_scenarios.append(scenario)
                     print(f"\nDiscovered scenario: {scenario} \n")
-                    scenario_prompt = self.analyzer.generate_prompt('', scenario,
-                                                                 self.existing_questions,
-                                                                 self.existing_outcomes)
+                    scenario_prompt = self.analyzer.generate_prompt('', scenario)
                     scenarios_to_explore.append((scenario_prompt, scenario))
             
             print(f"Scenarios explored: {scenarios_explored}/{self.max_scenarios}")
